@@ -39,6 +39,11 @@
         <div id="view-debris" class="hidden">
             <div class="card p-4 rounded-xl shadow-md mb-6">
                 <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-semibold flex items-center gap-2">💥 Débris (CDR)</h2><button onclick="chargerDebris()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-white transition font-bold shadow">🔄 Actualiser</button></div>
+                
+                <div class="bg-gray-800 text-xs text-center p-2 rounded-lg mb-4 border border-gray-700 shadow flex justify-center items-center gap-2">
+                    🔄 Prochaine màj de l'API dans : <span id="nextUpdateCountdown" class="text-neon font-mono font-bold text-sm">--m --s</span>
+                </div>
+
                 <div class="mb-4 bg-gray-800 p-3 rounded-lg border border-gray-700 flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Taille min.</label><input type="number" id="minDebrisInput" value="30000" step="10000" class="w-24 bg-gray-900 text-neon font-mono text-right rounded p-1 border border-gray-600 focus:border-neon outline-none"></div>
                 <div id="crashesArea" class="space-y-3"><div class="text-center text-gray-400 mt-6 p-4 border border-dashed border-gray-700 rounded-lg">Cliquez sur Actualiser.</div></div>
             </div>

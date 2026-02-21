@@ -1,20 +1,22 @@
 from fastapi import APIRouter, Query
-from config import BASE_URL, safe_fetch
+from config import BASE_URL, safe_fetch, logger
 
 router = APIRouter()
 
 @router.get("/api/profiler")
 def get_profiler(player_name: str = Query(...)):
     query = player_name.strip()
+    logger.info(f"🕵️ Renseignement demandé sur : {query}")
     
-    # --- NOUVEAU : MODULE ALLIANCE ---
     if query.startswith('[') and query.endswith(']'):
         tag = query[1:-1].lower()
         alliances_root = safe_fetch(f"{BASE_URL}/alliances.xml")
         players_root = safe_fetch(f"{BASE_URL}/players.xml")
         univ_root = safe_fetch(f"{BASE_URL}/universe.xml")
         
-        if not all([alliances_root, players_root, univ_root]): return {"error": "API indisponible"}
+        if not all([alliances_root, players_root, univ_root]): 
+            logger.error(f"❌ Profiler (Alliance) échoué : Timeout de l'API OGame.")
+            return {"error": "L'API OGame ne répond pas. Réessayez."}
         
         ally_id, ally_name = None, ""
         for a in alliances_root.findall('alliance'):
@@ -35,9 +37,10 @@ def get_profiler(player_name: str = Query(...)):
         alliance_data = [{"name": m['name'], "status": m['status'], "coords": coords_map.get(m['id'], [])[:3]} for m in members]
         return {"type": "alliance", "name": f"[{tag.upper()}] {ally_name}", "members": alliance_data}
     
-    # --- MODULE JOUEUR (Existant) ---
     players_root = safe_fetch(f"{BASE_URL}/players.xml")
-    if not players_root: return {"error": "API indisponible"}
+    if not players_root: 
+        logger.error(f"❌ Profiler (Joueur) échoué : Timeout de l'API OGame.")
+        return {"error": "L'API OGame ne répond pas. Réessayez."}
     
     target_id, target_name, target_status = None, "", ""
     for p in players_root.findall('player'):
@@ -64,4 +67,5 @@ def get_profiler(player_name: str = Query(...)):
                     scores[t_name] = {"score": int(p.get('score')), "rank": int(p.get('position'))}
                     break
 
+    logger.info(f"✅ Renseignement réussi pour {target_name}")
     return {"type": "player", "name": target_name, "status": target_status, "scores": scores, "planets": planets}

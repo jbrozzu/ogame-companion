@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import warnings
+from config import logger # On importe notre nouveau logger
 
 from api_radar import router as radar_router
 from api_debris import router as debris_router, monitor_crashes
@@ -22,9 +23,9 @@ app.include_router(profiler_router)
 
 @app.on_event("startup")
 async def startup_event():
+    logger.info("🟢 DÉMARRAGE DU SERVEUR : Lancement des tâches de fond...")
     asyncio.create_task(monitor_crashes())
 
-# --- NOUVEAU : On dit au serveur d'afficher l'interface visuelle ---
 @app.get("/")
 def read_root():
     return FileResponse("index.html")

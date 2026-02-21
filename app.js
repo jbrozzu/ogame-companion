@@ -13,7 +13,27 @@ window.onload = () => {
         document.getElementById('vitesseUniv').value = myConfig.vitesseUniv || 10;
     }
     afficherFavoris();
+    lancerCompteARebours(); // NOUVEAU : Lance l'horloge au démarrage
 };
+
+// --- NOUVEAU : Le Compte à Rebours ---
+function lancerCompteARebours() {
+    setInterval(() => {
+        let now = new Date();
+        let nextHour = new Date();
+        nextHour.setHours(now.getHours() + 1, 0, 0, 0); // Vise la prochaine heure pile (xx:00:00)
+        
+        let diffSecs = Math.floor((nextHour - now) / 1000);
+        let m = Math.floor(diffSecs / 60);
+        let s = diffSecs % 60;
+        
+        // Ajout d'un zéro devant les secondes si < 10 (ex: 4m 09s)
+        let formattedSecs = s < 10 ? "0" + s : s;
+        
+        let el = document.getElementById('nextUpdateCountdown');
+        if(el) el.innerText = `${m}m ${formattedSecs}s`;
+    }, 1000);
+}
 
 function saveConfig() {
     myConfig.coords = document.getElementById('myCoords').value;
@@ -83,11 +103,17 @@ function calculerVol(targetCoords, typeVaisseau = myConfig.vaisseau) {
     let vitesse = vitesseBase * (1 + (techUtilisee * multiplicateur));
     let dureeSec = 10 + (3500 / myConfig.vitesseUniv) * Math.sqrt((10 * dist) / vitesse);
     
-    let min = Math.floor(dureeSec / 60);
+    // --- NOUVEAU : Formatage en Heures, Minutes, Secondes ---
+    let h = Math.floor(dureeSec / 3600);
+    let min = Math.floor((dureeSec % 3600) / 60);
     let sec = Math.floor(dureeSec % 60);
+    
+    // N'affiche l'heure que si le trajet fait plus de 60 minutes
+    let tempsStr = h > 0 ? `${h}h ${min}m ${sec}s` : `${min}m ${sec}s`;
+    
     let coutDeut = 1 + Math.round((consoBase * dist) / 35000);
 
-    return { temps: `${min}m ${sec}s`, deut: coutDeut, dureeBrute: dureeSec };
+    return { temps: tempsStr, deut: coutDeut, dureeBrute: dureeSec };
 }
 
 async function lancerScan() {
@@ -106,7 +132,6 @@ async function lancerScan() {
 
         btnText.innerText = `Cibles : ${data.count}`;
         
-        // CORRECTION MAJEURE : On cherche la planète la plus proche parmi TOUTES les planètes de la cible
         currentRadarTargets = data.targets.map(t => {
             let bestLog = { temps: "N/A", deut: "N/A", dureeBrute: 9999999 };
             let bestCoord = "";
@@ -124,7 +149,7 @@ async function lancerScan() {
         });
         
         document.getElementById('sortButtons').classList.remove('hidden');
-        afficherRadar('ratio'); // On affiche direct sans planter
+        afficherRadar('ratio'); 
     } catch (e) { btnText.innerText = "Erreur Web"; }
     setTimeout(() => btnText.innerText = "Relancer le Scan", 2000);
 }
@@ -136,7 +161,6 @@ function afficherRadar(mode) {
     if(mode === 'ratio') currentRadarTargets.sort((a, b) => b.ratio - a.ratio);
     if(mode === 'temps') currentRadarTargets.sort((a, b) => a.dureeBrute - b.dureeBrute);
     
-    // CORRECTION : Coloration des boutons sans utiliser l'Event (anti-crash)
     document.getElementById('btnSortRatio').className = "flex-1 text-xs font-bold py-2 rounded border transition " + (mode === 'ratio' ? "bg-gray-800 text-neon border-neon" : "bg-gray-800 text-white border-gray-600 hover:border-neon");
     document.getElementById('btnSortTemps').className = "flex-1 text-xs font-bold py-2 rounded border transition " + (mode === 'temps' ? "bg-gray-800 text-neon border-neon" : "bg-gray-800 text-white border-gray-600 hover:border-neon");
 
@@ -160,7 +184,6 @@ function afficherRadar(mode) {
             </div>
             <div class="border-t border-gray-700 pt-3 flex flex-wrap gap-2">
                 ${t.coords.map(c => {
-                    // CORRECTION : Mise en évidence de la coordonnée la plus proche !
                     let isBest = (c === t.bestCoord);
                     let colorClass = isBest ? "bg-neon text-gray-900 font-bold border-neon" : "bg-gray-700 text-gray-200 hover:bg-neon hover:text-gray-900 border-transparent";
                     return `<span class="${colorClass} cursor-pointer px-2 py-1 rounded text-xs font-mono shadow transition border" onclick="navigator.clipboard.writeText('${c}')">${c}</span>`;
