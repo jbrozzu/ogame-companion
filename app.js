@@ -27,7 +27,7 @@ async function lancerScan() {
     resultsArea.innerHTML = "";
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/radar?min_rank=${minRank}&max_rank=${maxRank}&min_ratio=${minRatio}&inactives_only=${inactives}`);
+        const response = await fetch(`/api/radar?min_rank=${minRank}&max_rank=${maxRank}&min_ratio=${minRatio}&inactives_only=${inactives}`);
         const data = await response.json();
         btnText.innerText = `Cibles trouvées : ${data.count}`;
 
@@ -56,7 +56,7 @@ async function chargerDebris() {
     const minDebris = document.getElementById('minDebrisInput').value;
     area.innerHTML = "<p class='text-center text-gray-400 mt-4'>📡 Recherche de champs de débris en cours...</p>";
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/crashes?min_debris=${minDebris}`);
+        const response = await fetch(`/api/crashes?min_debris=${minDebris}`);
         const data = await response.json();
         if(data.crashes.length === 0) {
             area.innerHTML = `<div class="text-center text-gray-400 mt-6 p-4 border border-dashed border-gray-700 rounded-lg">Aucune flotte détruite détectée pour l'instant.</div>`;
@@ -83,7 +83,7 @@ async function chercherJoueur() {
 
     area.innerHTML = "<p class='text-center text-gray-400 mt-4'>⏳ Faisceau en cours de calcul...</p>";
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/profiler?player_name=${encodeURIComponent(searchInput)}`);
+        const response = await fetch(`/api/profiler?player_name=${encodeURIComponent(searchInput)}`);
         const data = await response.json();
         if(data.error) { area.innerHTML = `<div class="text-center text-red-400 mt-4 p-4 border border-dashed border-red-900 rounded-lg">❌ ${data.error}</div>`; return; }
 
