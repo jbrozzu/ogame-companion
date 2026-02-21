@@ -5,7 +5,6 @@ router = APIRouter()
 
 @router.get("/api/radar")
 def get_radar(min_rank: int = Query(1), max_rank: int = Query(4000), min_ratio: int = Query(15), inactives_only: bool = Query(True)):
-    # CORRECTION ICI : type=1 pour Eco, type=3 pour Militaire
     eco_root = safe_fetch(f"{BASE_URL}/highscore.xml?category=1&type=1")
     mil_root = safe_fetch(f"{BASE_URL}/highscore.xml?category=1&type=3")
     players_root = safe_fetch(f"{BASE_URL}/players.xml")
@@ -30,8 +29,9 @@ def get_radar(min_rank: int = Query(1), max_rank: int = Query(4000), min_ratio: 
             if eco_score > 5000:
                 ratio = eco_score / max(mil_score, 1)
                 if ratio >= min_ratio:
+                    # CORRECTION ICI : Suppression du [:3] pour avoir TOUTES les planètes
                     targets.append({
                         "name": player['name'], "rank": rank, "eco": eco_score, "mil": mil_score,
-                        "ratio": round(ratio, 1), "status": status, "coords": coords_map.get(p_id, [])[:3]
+                        "ratio": round(ratio, 1), "status": status, "coords": coords_map.get(p_id, [])
                     })
     return {"count": len(targets), "targets": sorted(targets, key=lambda x: x['ratio'], reverse=True)}

@@ -15,7 +15,6 @@ window.onload = () => {
     afficherFavoris();
 };
 
-// --- CORRECTION : UX DU BOUTON ENREGISTRER ---
 function saveConfig() {
     myConfig.coords = document.getElementById('myCoords').value;
     myConfig.techComb = parseInt(document.getElementById('techComb').value);
@@ -24,13 +23,11 @@ function saveConfig() {
     myConfig.vitesseUniv = parseInt(document.getElementById('vitesseUniv').value);
     localStorage.setItem('ogame_config', JSON.stringify(myConfig));
     
-    // Animation visuelle du bouton
     const btn = document.getElementById('btnSaveConfig');
     if(btn) {
         btn.innerText = "✅ Enregistré !";
         btn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
         btn.classList.add('bg-green-600', 'hover:bg-green-500');
-        
         setTimeout(() => {
             btn.innerText = "Enregistrer";
             btn.classList.remove('bg-green-600', 'hover:bg-green-500');
@@ -95,20 +92,40 @@ function calculerVol(targetCoords, typeVaisseau = myConfig.vaisseau) {
 
 async function lancerScan() {
     const btnText = document.getElementById('btnText');
+    const area = document.getElementById('resultsArea');
     btnText.innerText = "Analyse...";
     try {
         const response = await fetch(`/api/radar?min_rank=${document.getElementById('minRank').value}&max_rank=${document.getElementById('maxRank').value}&min_ratio=${document.getElementById('minRatio').value}&inactives_only=${document.getElementById('inactivesOnly').checked}`);
         const data = await response.json();
+        
+        if(data.error) {
+            btnText.innerText = "Erreur Serveur";
+            area.innerHTML = `<div class="text-center text-red-400 mt-6 p-4 border border-dashed border-red-900 rounded-lg">❌ ${data.error}</div>`;
+            return;
+        }
+
         btnText.innerText = `Cibles : ${data.count}`;
         
+        // CORRECTION MAJEURE : On cherche la planète la plus proche parmi TOUTES les planètes de la cible
         currentRadarTargets = data.targets.map(t => {
-            let log = calculerVol(t.coords.length > 0 ? t.coords[0] : null);
-            return {...t, tempsStr: log.temps, deut: log.deut, dureeBrute: log.dureeBrute};
+            let bestLog = { temps: "N/A", deut: "N/A", dureeBrute: 9999999 };
+            let bestCoord = "";
+            
+            if (t.coords && t.coords.length > 0) {
+                t.coords.forEach(c => {
+                    let log = calculerVol(c);
+                    if (log.dureeBrute < bestLog.dureeBrute) {
+                        bestLog = log;
+                        bestCoord = c;
+                    }
+                });
+            }
+            return {...t, tempsStr: bestLog.temps, deut: bestLog.deut, dureeBrute: bestLog.dureeBrute, bestCoord: bestCoord};
         });
         
         document.getElementById('sortButtons').classList.remove('hidden');
-        afficherRadar('ratio');
-    } catch (e) { btnText.innerText = "Erreur"; }
+        afficherRadar('ratio'); // On affiche direct sans planter
+    } catch (e) { btnText.innerText = "Erreur Web"; }
     setTimeout(() => btnText.innerText = "Relancer le Scan", 2000);
 }
 
@@ -119,8 +136,9 @@ function afficherRadar(mode) {
     if(mode === 'ratio') currentRadarTargets.sort((a, b) => b.ratio - a.ratio);
     if(mode === 'temps') currentRadarTargets.sort((a, b) => a.dureeBrute - b.dureeBrute);
     
-    document.querySelectorAll('#sortButtons button').forEach(b => { b.classList.remove('text-neon', 'border-neon'); b.classList.add('text-white'); });
-    event.target.classList.add('text-neon', 'border-neon');
+    // CORRECTION : Coloration des boutons sans utiliser l'Event (anti-crash)
+    document.getElementById('btnSortRatio').className = "flex-1 text-xs font-bold py-2 rounded border transition " + (mode === 'ratio' ? "bg-gray-800 text-neon border-neon" : "bg-gray-800 text-white border-gray-600 hover:border-neon");
+    document.getElementById('btnSortTemps').className = "flex-1 text-xs font-bold py-2 rounded border transition " + (mode === 'temps' ? "bg-gray-800 text-neon border-neon" : "bg-gray-800 text-white border-gray-600 hover:border-neon");
 
     currentRadarTargets.forEach(t => {
         const statusTag = (t.status.includes('i') || t.status.includes('I')) ? `<span class="bg-blue-900 text-blue-300 text-[10px] px-2 py-0.5 rounded font-bold ml-2 uppercase">Inactif</span>` : '';
@@ -141,7 +159,12 @@ function afficherRadar(mode) {
                 <span class="text-blue-300 text-xs font-mono">💧 ${t.deut} Deut</span>
             </div>
             <div class="border-t border-gray-700 pt-3 flex flex-wrap gap-2">
-                ${t.coords.map(c => `<span class="bg-gray-700 hover:bg-neon hover:text-gray-900 cursor-pointer text-gray-200 px-2 py-1 rounded text-xs font-mono shadow" onclick="navigator.clipboard.writeText('${c}')">${c}</span>`).join('')}
+                ${t.coords.map(c => {
+                    // CORRECTION : Mise en évidence de la coordonnée la plus proche !
+                    let isBest = (c === t.bestCoord);
+                    let colorClass = isBest ? "bg-neon text-gray-900 font-bold border-neon" : "bg-gray-700 text-gray-200 hover:bg-neon hover:text-gray-900 border-transparent";
+                    return `<span class="${colorClass} cursor-pointer px-2 py-1 rounded text-xs font-mono shadow transition border" onclick="navigator.clipboard.writeText('${c}')">${c}</span>`;
+                }).join('')}
             </div>
         </div>`;
         area.insertAdjacentHTML('beforeend', card);
