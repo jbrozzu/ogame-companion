@@ -5,12 +5,43 @@ router = APIRouter()
 
 @router.get("/api/profiler")
 def get_profiler(player_name: str = Query(...)):
+    query = player_name.strip()
+    
+    # --- NOUVEAU : MODULE ALLIANCE ---
+    if query.startswith('[') and query.endswith(']'):
+        tag = query[1:-1].lower()
+        alliances_root = safe_fetch(f"{BASE_URL}/alliances.xml")
+        players_root = safe_fetch(f"{BASE_URL}/players.xml")
+        univ_root = safe_fetch(f"{BASE_URL}/universe.xml")
+        
+        if not all([alliances_root, players_root, univ_root]): return {"error": "API indisponible"}
+        
+        ally_id, ally_name = None, ""
+        for a in alliances_root.findall('alliance'):
+            if a.get('tag').lower() == tag:
+                ally_id, ally_name = a.get('id'), a.get('name')
+                break
+        if not ally_id: return {"error": "Alliance introuvable"}
+        
+        members = []
+        for p in players_root.findall('player'):
+            if p.get('alliance') == ally_id:
+                members.append({"id": p.get('id'), "name": p.get('name'), "status": p.get('status') or ""})
+                
+        coords_map = {}
+        for pl in univ_root.findall('planet'):
+            coords_map.setdefault(pl.get('player'), []).append(pl.get('coords'))
+            
+        alliance_data = [{"name": m['name'], "status": m['status'], "coords": coords_map.get(m['id'], [])[:3]} for m in members]
+        return {"type": "alliance", "name": f"[{tag.upper()}] {ally_name}", "members": alliance_data}
+    
+    # --- MODULE JOUEUR (Existant) ---
     players_root = safe_fetch(f"{BASE_URL}/players.xml")
     if not players_root: return {"error": "API indisponible"}
     
     target_id, target_name, target_status = None, "", ""
     for p in players_root.findall('player'):
-        if p.get('name').lower() == player_name.lower().strip():
+        if p.get('name').lower() == query.lower():
             target_id, target_name, target_status = p.get('id'), p.get('name'), p.get('status') or ""
             break
             
@@ -33,4 +64,4 @@ def get_profiler(player_name: str = Query(...)):
                     scores[t_name] = {"score": int(p.get('score')), "rank": int(p.get('position'))}
                     break
 
-    return {"name": target_name, "status": target_status, "scores": scores, "planets": planets}
+    return {"type": "player", "name": target_name, "status": target_status, "scores": scores, "planets": planets}

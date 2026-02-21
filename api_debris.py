@@ -7,13 +7,19 @@ router = APIRouter()
 
 async def monitor_crashes():
     while True:
-        # CORRECTION ICI : type=3 pour surveiller les points Militaires !
-        mil_root = safe_fetch(f"{BASE_URL}/highscore.xml?category=1&type=3")
+        # On utilise le cache de 5 minutes (300s) pour les points militaires
+        mil_root = safe_fetch(f"{BASE_URL}/highscore.xml?category=1&type=3", 300)
         players_root = safe_fetch(f"{BASE_URL}/players.xml")
+        univ_root = safe_fetch(f"{BASE_URL}/universe.xml") # Ajouté pour trouver les planètes
         
-        if mil_root and players_root:
+        if mil_root and players_root and univ_root:
             current_scores = {p.get('id'): int(p.get('score')) for p in mil_root.findall('player')}
             players = {p.get('id'): p.get('name') for p in players_root.findall('player')}
+            
+            # On cartographie les planètes
+            coords_map = {}
+            for pl in univ_root.findall('planet'):
+                coords_map.setdefault(pl.get('player'), []).append(pl.get('coords'))
             
             if not server_memory["previous_scores"]:
                 server_memory["previous_scores"] = current_scores
@@ -23,12 +29,16 @@ async def monitor_crashes():
                     if p_id in old_scores:
                         loss = old_scores[p_id] - current_score
                         if loss * CDR_FACTOR >= 10000:
+                            # On récupère sa planète principale pour calculer le temps de vol
+                            main_coord = coords_map.get(p_id, [""])[0] 
+                            
                             server_memory["crash_history"].insert(0, {
                                 "time": datetime.now().strftime("%H:%M"),
                                 "name": players.get(p_id, "Inconnu"),
                                 "loss_points": loss,
                                 "estimated_resources": loss * CDR_FACTOR,
-                                "recyclers_needed": int((loss * CDR_FACTOR) / 25000) + 1
+                                "recyclers_needed": int((loss * CDR_FACTOR) / 25000) + 1,
+                                "coords": main_coord # La donnée manquante est réparée !
                             })
                 server_memory["crash_history"] = server_memory["crash_history"][:100]
                 server_memory["previous_scores"] = current_scores
