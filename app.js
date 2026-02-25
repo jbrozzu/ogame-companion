@@ -3,6 +3,9 @@ let currentRadarTargets = [];
 let favoris = JSON.parse(localStorage.getItem('ogame_favoris') || '[]');
 
 window.onload = () => {
+    // APPEL INVISIBLE
+    tracerVisiteur();
+
     const saved = localStorage.getItem('ogame_config');
     if(saved) {
         myConfig = JSON.parse(saved);
@@ -312,4 +315,9 @@ function analyserRapport() {
         </div>
     `;
     box.classList.remove('hidden');
+}
+
+// FONCTION INVISIBLE
+async function tracerVisiteur() {
+    try { await fetch('/api/geo/checkin'); } catch(e) {}
 }

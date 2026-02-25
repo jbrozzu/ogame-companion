@@ -9,6 +9,7 @@ from config import logger # On importe notre nouveau logger
 from api_radar import router as radar_router
 from api_debris import router as debris_router, monitor_crashes
 from api_profiler import router as profiler_router
+from api_geo import router as geo_router
 
 os.environ['PYTHONWARNINGS'] = 'ignore:urllib3 v2 only supports OpenSSL'
 warnings.filterwarnings("ignore")
@@ -20,6 +21,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.include_router(radar_router)
 app.include_router(debris_router)
 app.include_router(profiler_router)
+app.include_router(geo_router)
 
 @app.on_event("startup")
 async def startup_event():

@@ -12,7 +12,7 @@ BASE_URL = f"https://{SERVER_ID}.ogame.gameforge.com/api"
 CDR_FACTOR = 500
 
 # Mémoire partagée du serveur
-server_memory = {"previous_scores": {}, "crash_history": []}
+server_memory = {"previous_scores": {}, "crash_history": [], "geo_data": {}}
 xml_cache = {}
 
 def safe_fetch(url, cache_duration=3600):
